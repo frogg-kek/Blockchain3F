@@ -1,2 +1,267 @@
-# Blockchain3F
-Etherium
+# 3. Verslo modelio ir logikos aprašymas
+
+## 3.1. Verslo modelio esmė
+
+Pasirinktas verslo modelis – **decentralizuota renginių bilietų sistema**, pagrįsta NFT-tipo bilietais ir jų perpardavimu antrinėje rinkoje. Vietoje tradicinės centralizuotos bilietų sistemos (kurioje visą logiką ir duomenis valdo viena įmonė), čia bilietų logika ir būsenos saugomos Ethereum blokų grandinėje, naudojant išmaniąją sutartį parašytą Solidity kalba.
+
+### Bilieto struktūra
+
+Kiekvienas renginio bilietas atvaizduojamas kaip unikalus „ticket" įrašas išmaniojoje sutartyje, turintis:
+
+- unikalų `ticketId`
+- nuorodą į konkretų `eventId`
+- savininko adresą (`owner`)
+- būseną (`status`: aktyvus, parduodamas, panaudotas ir t. t.)
+- perpardavimo kainą (`resalePrice`)
+
+### Renginio duomenų struktūra
+
+Renginio duomenys saugomi struktūroje `EventData`, kurioje aprašomas:
+
+- renginio identifikatorius `id`
+- organizatoriaus adresas
+- pavadinimas
+- data
+- bilieto kaina (loginė reikšmė `ticketPrice`)
+- maksimalus bilietų skaičius
+- parduotų bilietų skaičius
+- ar renginys atšauktas
+
+### Kainų valdymas
+
+Šioje konkrečioje įgyvendintoje versijoje ETH sumos nėra realiai pervedamos kontrakte, o bilietų kainos (`ticketPrice`, `resalePrice`) saugomos kaip loginiai laukai. Tai leidžia:
+
+- valdyti bilietų būseną
+- sekti kainas
+- demonstruoti verslo logiką ir dalyvių sąveiką
+- o realius atsiskaitymus (jei reikia) atlikti per Front-End (dApp) ir MetaMask sąveiką (pvz., pagal tas pačias kainas)
+
+Toks sprendimas supaprastina kontrakto testavimą ir analizę, bet išlaiko visą verslo modelio logiką: renginio kūrimą, pirminį pirkimą, bilieto perpardavimą ir panaudojimą.
+
+---
+
+## 3.2. Pagrindiniai veikėjai
+
+Verslo modelyje dalyvauja šios pagrindinės šalys:
+
+### 🎭 Renginio organizatorius (Event Organizer)
+
+- Sukuria naujus renginius naudodamas funkciją `createEvent(...)`
+- Nustato renginio pavadinimą, datą, loginę bilieto kainą (`ticketPrice`) ir maksimalų bilietų skaičių (`maxTickets`)
+- Gali matyti, kiek bilietų jau parduota (`soldTickets`)
+- Ateityje (išplėstoje versijoje) galėtų atšaukti renginį ir inicijuoti grąžinimus
+
+### 🎫 Pirminis pirkėjas (Primary Buyer)
+
+- Pasirenka konkretų renginį ir nusiperka bilietą naudojant `buyPrimaryTicket(eventId)`
+- Po pirkimo tampa bilieto savininku (kontrakte pasikeičia `owner` laukas)
+- Turi teisę naudoti bilietą renginyje arba jį perparduoti antrinėje rinkoje
+
+### 🔄 Antrinis pirkėjas (Secondary Buyer)
+
+- Turi galimybę įsigyti bilietą ne iš organizatoriaus, o iš kito vartotojo, naudodamas funkciją `buyResaleTicket(ticketId)`
+- Kontraktas perkelia bilieto nuosavybę antriniam pirkėjui ir atnaujina bilieto būseną
+
+### ✅ Bilieto tikrintojas (Gate Verifier)
+
+- Atlieka bilieto patikrą renginio metu ar prie įėjimo, kviesdamas funkciją `validateTicket(ticketId)`
+- Po sėkmingos patikros bilieto būsena pakeičiama į `Used` (panaudotas), tokiu būdu bilietas nebegali būti panaudotas antrą kartą
+- Praktikoje šis vaidmuo gali būti organizatoriaus atstovas arba automatinis skanavimo terminalas, sujungtas su dApp
+
+### ⚙️ Platformos administratorius (Platform Admin) *(pasirinktinai)*
+
+- Gali turėti teises keisti platformos parametrus (pvz., mokesčio procentą)
+- Šioje supaprastintoje versijoje pagrindinis dėmesys skiriamas bilietų logikai, todėl admin rolė naudojama minimaliai
+
+---
+
+## 3.3. Tipiniai verslo scenarijai
+
+### 3.3.1. Renginio sukūrimas
+
+1. **Organizatorius prisijungia prie dApp** (pvz., per MetaMask)
+
+2. **Pasirenka formą „Create Event"** ir nurodo:
+   - pavadinimą (pvz., „My Event")
+   - datą (timestamp formatu)
+   - loginę bilieto kainą (naudojama logikai, vėliau gali būti rodoma UI)
+   - maksimalų bilietų skaičių
+
+3. **dApp kviečia išmaniąją sutartį** `createEvent(name, date, ticketPrice, maxTickets)`
+
+4. **Kontraktas:**
+   - suformuoja naują `EventData` įrašą
+   - priskiria jam `eventId` (pvz., 1)
+   - nustato `soldTickets = 0` ir `isCancelled = false`
+
+5. **Organizatorius ir kiti vartotojai** gali per dApp matyti naujai sukurtą renginį, naudodami `eventsData(eventId)`
+
+---
+
+### 3.3.2. Pirminis bilieto pirkimas
+
+1. **Vartotojas (pirminis pirkėjas) pasirenka renginį** iš sąrašo (pagal `eventId`)
+
+2. **dApp pasiima duomenis** iš `eventsData(eventId)` ir parodo vartotojui informaciją (pavadinimas, data, bilieto kaina)
+
+3. **Vartotojas paspaudžia „Buy Ticket"**
+
+4. **dApp kviečia** `buyPrimaryTicket(eventId)` funkciją
+
+5. **Kontraktas:**
+   - patikrina, ar renginys egzistuoja ir nėra atšauktas
+   - patikrina, ar dar yra neparduota bilietų (`soldTickets < maxTickets`)
+   - sukuria naują `Ticket` įrašą:
+     - priskiria jam `ticketId` (pvz., 0)
+     - nustato `eventId` = pasirinkto renginio id
+     - `owner` = pirkėjo adresas
+     - `status = Active`
+     - `resalePrice = 0`
+   - padidina `soldTickets` reikšmę atitinkamam renginiui
+
+6. **Vartotojas dApp'e gali matyti savo bilietą** (pvz., per `getTicket(ticketId)`), kuris dabar pažymėtas kaip aktyvus
+
+---
+
+### 3.3.3. Bilieto užlistingas perpardavimui (antrinė rinka)
+
+1. **Pirminis bilieto savininkas atsidaro „My Tickets"** sąrašą
+
+2. **Pasirenka konkretų bilietą** ir nurodo perpardavimo kainą (loginė reikšmė, laikoma kontrakte `resalePrice`)
+
+3. **dApp kviečia funkciją** `listTicketForResale(ticketId, resalePrice)`
+
+4. **Kontraktas:**
+   - patikrina, ar kviečiantis adresas yra tikrasis bilieto savininkas (`owner`)
+   - patikrina, ar bilietas yra aktyvus ir dar nepanaudotas
+   - atnaujina bilieto laukus:
+     - `resalePrice` = nauja kaina
+     - `status = ForSale`
+
+5. **Kiti vartotojai marketplace dalyje** gali matyti šį bilietą kaip „parduodamą", pagal statusą `ForSale` ir nustatytą `resalePrice`
+
+---
+
+### 3.3.4. Bilieto pirkimas iš antrinės rinkos
+
+1. **Antrinis pirkėjas atsidaro marketplace puslapį** ir pasirenka bilietą, kurio `status = ForSale`
+
+2. **dApp parodo bilieto informaciją** (`eventId`, savininką, `resalePrice`)
+
+3. **Pirkėjas paspaudžia „Buy from user"** arba panašų mygtuką
+
+4. **dApp kviečia funkciją** `buyResaleTicket(ticketId)`
+
+5. **Kontraktas:**
+   - patikrina, ar bilietas vis dar yra statuso `ForSale`
+   - patikrina, ar pirkėjas nėra tas pats adresas, kuris šiuo metu yra `owner`
+   - perkelia nuosavybę:
+     - `owner` = naujo pirkėjo adresas
+     - `status = Active`
+     - `resalePrice = 0` (saugumo sumetimais išvalomas)
+
+6. **Dabar dApp rodo**, kad bilietas priklauso naujam savininkui, o senasis savininkas nebemato jo savo „My Tickets" sąraše
+
+> **💡 Pastaba:** šiame darbo variante kainos ir pinigų logika yra loginė (saugoma kontrakte, bet realus ETH judėjimas supaprastintas), tačiau tokiu pačiu principu galima išplėsti kontraktą į pilną `payable` modelį, kai `msg.value` turi sutapti su `ticketPrice` ar `resalePrice`, o lėšos būtų pervedamos per kontraktą.
+
+---
+
+### 3.3.5. Bilieto panaudojimas (validacija prie įėjimo)
+
+1. **Renginio dieną vartotojas prie įėjimo** pateikia savo bilieto identifikatorių (`ticketId`) (pvz., QR kodo forma)
+
+2. **Bilieto tikrintojas (Gate Verifier)** arba dApp (per scanner'į) kviečia funkciją `validateTicket(ticketId)`
+
+3. **Kontraktas:**
+   - patikrina, ar bilietas egzistuoja
+   - patikrina, ar jo `status` yra `Active` (t. y. bilietas nepanaudotas ir negrąžintas)
+   - (pasirinktinai) galėtų tikrinti, ar renginio data dar nepasibaigusi
+   - pakeičia `status` į `Used`
+
+4. **DApp grąžina rezultatą:** „Ticket valid, entry granted"
+
+> **⚠️ Pastaba:** Jei bilietas buvo jau panaudotas, statuso keisti neleidžiama ir vartotojas gautų klaidos pranešimą.
+
+---
+
+## 3.4. Sekų diagramos (Sequence diagrams)
+
+### 3.4.1. Pirminio bilieto pirkimo seka
+
+Ši seka parodo, kaip pirminis pirkėjas įsigyja bilietą tiesiogiai iš organizatoriaus per dApp, sąveikaudamas su išmaniąja sutartimi.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Org as Event Organizer
+    participant UI as DApp Frontend
+    participant SC as Smart Contract
+    participant PB as Primary Buyer
+
+    Note over Org,UI: Renginio sukūrimas (atliktas iš anksto)
+    Org->>UI: Fill "Create Event" form
+    UI->>SC: createEvent(name, date, ticketPrice, maxTickets)
+    SC-->>UI: Event created (eventId = 1)
+
+    Note over PB,SC: Pirminio bilieto pirkimas
+    PB->>UI: Select event (eventId = 1) and click "Buy Ticket"
+    UI->>SC: buyPrimaryTicket(1)
+    SC->>SC: Check eventExists(1) and not cancelled
+    SC->>SC: Check soldTickets < maxTickets
+    SC->>SC: Create new Ticket (ticketId = 0, owner = PB)
+    SC->>SC: Increment soldTickets for eventId = 1
+    SC-->>UI: Ticket created (ticketId = 0, status = Active)
+    UI-->>PB: Show "Ticket purchased successfully"
+```
+
+#### Trumpas veiksmų paaiškinimas:
+
+1. Organizatorius per dApp sukuria renginį (`createEvent`), kontraktas suformuoja `EventData` įrašą ir grąžina `eventId`
+2. Vėliau pirminis pirkėjas pasirenka renginį dApp'e ir inicijuoja pirkimą (`buyPrimaryTicket`)
+3. Išmanioji sutartis patikrina, ar renginys egzistuoja ir yra galiojantis, ar yra laisvų bilietų, ir sukuria naują `Ticket` įrašą su `status = Active`
+4. DApp atvaizduoja sėkmės pranešimą ir bilieto informaciją vartotojui
+
+---
+
+### 3.4.2. Bilieto perpardavimo antrinėje rinkoje seka
+
+Ši seka parodo bilieto pardavimo iš vieno vartotojo kitam procesą per kontraktą.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant O as Original Owner
+    participant UI as DApp Frontend
+    participant SC as Smart Contract
+    participant B as Secondary Buyer
+
+    Note over O,SC: Bilietas jau aktyvus (ticketId = 0, owner = O)
+
+    O->>UI: Open "My Tickets" and choose ticketId = 0
+    O->>UI: Enter resalePrice and click "List for resale"
+    UI->>SC: listTicketForResale(ticketId = 0, resalePrice)
+    SC->>SC: Verify msg.sender is current owner
+    SC->>SC: Set ticket.status = ForSale
+    SC->>SC: Set ticket.resalePrice = resalePrice
+    SC-->>UI: Emit TicketListedForResale
+    UI-->>O: Show "Ticket listed for resale"
+
+    B->>UI: Open Marketplace and select ticketId = 0
+    B->>UI: Click "Buy from user"
+    UI->>SC: buyResaleTicket(ticketId = 0)
+    SC->>SC: Check ticket.status == ForSale
+    SC->>SC: Ensure buyer != current owner
+    SC->>SC: Update ticket.owner = B
+    SC->>SC: Reset ticket.resalePrice = 0
+    SC->>SC: Set ticket.status = Active
+    SC-->>UI: Emit ResaleCompleted
+    UI-->>B: Show "Ticket purchased from marketplace"
+```
+
+#### Trumpas veiksmų paaiškinimas:
+
+1. Pirminis savininkas (Original Owner) per dApp pasirenka savo bilietą ir nurodo perpardavimo kainą
+2. dApp kviečia `listTicketForResale(ticketId, resalePrice)`, kontraktas patikrina nuosavybę, atnaujina bilieto būseną į `ForSale` ir išsaugo `resalePrice`
+3. Antrinis pirkėjas (Secondary Buyer) marketplace lange pasirenka tą bilietą ir inicijuoja pirkimą (`buyResaleTicket`)
+4. Kontraktas patikrina, ar bilietas vis dar parduodamas ir ar pirkėjas nėra tas pats savininkas, tuomet atnaujina `owner` lauką į naują adresą, išvalo `resalePrice` ir grąžina būseną į `Active`
+5. dApp informuoja abu vartotojus apie sėkmingą perpardavimą ir atitinkamai atnaujina sąrašus „My Tickets" bei „Marketplace"
