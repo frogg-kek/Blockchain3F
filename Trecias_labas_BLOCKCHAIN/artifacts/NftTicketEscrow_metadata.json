@@ -1,0 +1,662 @@
+{
+	"compiler": {
+		"version": "0.8.30+commit.73712a01"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [],
+				"stateMutability": "nonpayable",
+				"type": "constructor"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "uint256",
+						"name": "eventId",
+						"type": "uint256"
+					}
+				],
+				"name": "EventCancelled",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "uint256",
+						"name": "eventId",
+						"type": "uint256"
+					},
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "organizer",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "string",
+						"name": "name",
+						"type": "string"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "date",
+						"type": "uint256"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "ticketPrice",
+						"type": "uint256"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "maxTickets",
+						"type": "uint256"
+					}
+				],
+				"name": "EventCreated",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "oldBps",
+						"type": "uint256"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "newBps",
+						"type": "uint256"
+					}
+				],
+				"name": "PlatformFeeUpdated",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "uint256",
+						"name": "eventId",
+						"type": "uint256"
+					},
+					{
+						"indexed": true,
+						"internalType": "uint256",
+						"name": "ticketId",
+						"type": "uint256"
+					},
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "buyer",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "price",
+						"type": "uint256"
+					}
+				],
+				"name": "PrimaryTicketPurchased",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "uint256",
+						"name": "ticketId",
+						"type": "uint256"
+					},
+					{
+						"indexed": true,
+						"internalType": "uint256",
+						"name": "eventId",
+						"type": "uint256"
+					},
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "recipient",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "amount",
+						"type": "uint256"
+					}
+				],
+				"name": "RefundIssued",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "uint256",
+						"name": "ticketId",
+						"type": "uint256"
+					},
+					{
+						"indexed": true,
+						"internalType": "uint256",
+						"name": "eventId",
+						"type": "uint256"
+					},
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "buyer",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "address",
+						"name": "seller",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "price",
+						"type": "uint256"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "fee",
+						"type": "uint256"
+					}
+				],
+				"name": "ResaleCompleted",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "uint256",
+						"name": "ticketId",
+						"type": "uint256"
+					},
+					{
+						"indexed": true,
+						"internalType": "uint256",
+						"name": "eventId",
+						"type": "uint256"
+					},
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "seller",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "resalePrice",
+						"type": "uint256"
+					}
+				],
+				"name": "TicketListedForResale",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "uint256",
+						"name": "ticketId",
+						"type": "uint256"
+					},
+					{
+						"indexed": true,
+						"internalType": "uint256",
+						"name": "eventId",
+						"type": "uint256"
+					},
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "user",
+						"type": "address"
+					}
+				],
+				"name": "TicketUsed",
+				"type": "event"
+			},
+			{
+				"stateMutability": "payable",
+				"type": "fallback"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "eventId",
+						"type": "uint256"
+					}
+				],
+				"name": "buyPrimaryTicket",
+				"outputs": [],
+				"stateMutability": "payable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "ticketId",
+						"type": "uint256"
+					}
+				],
+				"name": "buyResaleTicket",
+				"outputs": [],
+				"stateMutability": "payable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "eventId",
+						"type": "uint256"
+					}
+				],
+				"name": "cancelEvent",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "string",
+						"name": "name",
+						"type": "string"
+					},
+					{
+						"internalType": "uint256",
+						"name": "date",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "ticketPrice",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "maxTickets",
+						"type": "uint256"
+					}
+				],
+				"name": "createEvent",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "eventId",
+						"type": "uint256"
+					}
+				],
+				"name": "eventExists",
+				"outputs": [
+					{
+						"internalType": "bool",
+						"name": "",
+						"type": "bool"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"name": "eventsData",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "id",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address",
+						"name": "organizer",
+						"type": "address"
+					},
+					{
+						"internalType": "string",
+						"name": "name",
+						"type": "string"
+					},
+					{
+						"internalType": "uint256",
+						"name": "date",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "ticketPrice",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "maxTickets",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "soldTickets",
+						"type": "uint256"
+					},
+					{
+						"internalType": "bool",
+						"name": "isCancelled",
+						"type": "bool"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "ticketId",
+						"type": "uint256"
+					}
+				],
+				"name": "getTicket",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "id",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "eventId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address",
+						"name": "owner",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "resalePrice",
+						"type": "uint256"
+					},
+					{
+						"internalType": "enum NftTicketEscrow.TicketStatus",
+						"name": "status",
+						"type": "uint8"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "ticketId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "resalePrice",
+						"type": "uint256"
+					}
+				],
+				"name": "listTicketForResale",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "nextEventId",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "nextTicketId",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "platformAdmin",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "platformFeeBps",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "ticketId",
+						"type": "uint256"
+					}
+				],
+				"name": "refundTicket",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "newBps",
+						"type": "uint256"
+					}
+				],
+				"name": "setPlatformFeeBps",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"name": "tickets",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "id",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "eventId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address",
+						"name": "owner",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "resalePrice",
+						"type": "uint256"
+					},
+					{
+						"internalType": "enum NftTicketEscrow.TicketStatus",
+						"name": "status",
+						"type": "uint8"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "ticketId",
+						"type": "uint256"
+					}
+				],
+				"name": "validateTicket",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"stateMutability": "payable",
+				"type": "receive"
+			}
+		],
+		"devdoc": {
+			"details": "Simple NFT-like ticketing and resale system with escrow-style transfers.      Educational example suitable for Remix and testnets (Sepolia, etc). Features:  - Event creation by organizers  - Primary ticket purchases  - Secondary resale marketplace with on-contract escrow handling  - Ticket validation (mark as used)  - Event cancellation and ticket refunds Notes:  - Tickets are simple structs (not an ERC-721 implementation) to keep code compact.  - All external calls that transfer ETH use the checks-effects-interactions pattern.",
+			"kind": "dev",
+			"methods": {
+				"refundTicket(uint256)": {
+					"details": "Refunds the original primary ticket price. If ticket was purchased via resale,      we still refund the original event ticket price for simplicity."
+				},
+				"validateTicket(uint256)": {
+					"details": "For simplicity callable by anyone; in production restrict to gate staff or organizer."
+				}
+			},
+			"title": "NftTicketEscrow",
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {
+				"buyPrimaryTicket(uint256)": {
+					"notice": "Buy a primary ticket directly from the organizer."
+				},
+				"buyResaleTicket(uint256)": {
+					"notice": "Buy a ticket listed for resale. Contract handles escrow and platform fee."
+				},
+				"cancelEvent(uint256)": {
+					"notice": "Cancel an event. Only organizer may call."
+				},
+				"createEvent(string,uint256,uint256,uint256)": {
+					"notice": "Create an event. Organizer becomes msg.sender."
+				},
+				"eventExists(uint256)": {
+					"notice": "Helper to check if an event exists"
+				},
+				"getTicket(uint256)": {
+					"notice": "Get basic ticket info tuple"
+				},
+				"listTicketForResale(uint256,uint256)": {
+					"notice": "List an owned ticket for resale at a chosen price."
+				},
+				"refundTicket(uint256)": {
+					"notice": "Refund a ticket after its event has been cancelled."
+				},
+				"setPlatformFeeBps(uint256)": {
+					"notice": "Set platform fee in basis points (10000 = 100%). Only admin."
+				},
+				"validateTicket(uint256)": {
+					"notice": "Validate (use) a ticket. This marks it as Used."
+				}
+			},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"contracts/kontraktas.sol": "NftTicketEscrow"
+		},
+		"evmVersion": "prague",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": false,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"contracts/kontraktas.sol": {
+			"keccak256": "0x02ec9457646d3c1bb3d6fee3bcef12f4a1ab12a011ca478a67dde2331727bcbe",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://0bf2a2d30f21f60cf9fb3be2f64ed0998ff008dd0abc33fdd54010ead692f133",
+				"dweb:/ipfs/QmZcFEThrT6HqBvcUS4GoEZMENHuzJFganCM3Bnd24H2dv"
+			]
+		}
+	},
+	"version": 1
+}
