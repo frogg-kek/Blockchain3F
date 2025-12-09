@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFT Ticket Escrow dApp</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Animated Background Particles -->
+    <div class="particle particle-1"></div>
+    <div class="particle particle-2"></div>
+    <div class="particle particle-3"></div>
+
+    <!-- Warning Banner for MetaMask -->
+    <div id="metamaskWarning" class="warning-banner" style="display: none;">
+        <strong>⚠️ MetaMask not detected!</strong> Please install MetaMask to use this dApp.
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="header-left">
+                <h1 class="app-title">NFT Ticket Escrow dApp</h1>
+                <p class="app-subtitle">Create events, sell tickets, validate access</p>
+            </div>
+            <button id="connectWalletBtn" class="btn btn-primary">Connect Wallet</button>
+        </div>
+        <div id="networkStatus" class="network-status"></div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+        <!-- Row 1: Create Event -->
+        <section class="card">
+            <h2 class="card-title">Create Event</h2>
+            <p class="card-subtitle">Set up a new event and define ticket parameters</p>
+            <form id="createEventForm" class="form">
+                <div class="form-group">
+                    <label for="eventName">Event Name</label>
+                    <input type="text" id="eventName" placeholder="e.g., Concert 2024" required>
+                    <small class="helper-text">The name of your event (e.g., concert, conference, sports)</small>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label for="eventDate">Event Date (UNIX)</label>
+                        <input type="number" id="eventDate" placeholder="e.g., 1704067200" required>
+                        <small class="helper-text">UNIX timestamp</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="ticketPrice">Ticket Price (Wei)</label>
+                        <input type="number" id="ticketPrice" placeholder="e.g., 1000000000000000000" required>
+                        <small class="helper-text">Price in Wei</small>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="maxTickets">Max Tickets Available</label>
+                    <input type="number" id="maxTickets" placeholder="e.g., 100" required>
+                    <small class="helper-text">Maximum number of tickets for this event.</small>
+                </div>
+                <button type="button" class="btn btn-primary" onclick="createEvent()">Create Event</button>
+            </form>
+        </section>
+
+        <!-- Row 2: Buy Tickets -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <section class="card">
+                <h2 class="card-title">Buy Primary Ticket</h2>
+                <p class="card-subtitle">Purchase directly from organizer</p>
+                <form id="buyPrimaryForm" class="form">
+                    <div class="form-group">
+                        <label for="eventId">Event ID</label>
+                        <input type="number" id="eventId" placeholder="e.g., 1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="primaryPrice">Ticket Price (Wei)</label>
+                        <input type="number" id="primaryPrice" placeholder="e.g., 1000000000000000000" required>
+                    </div>
+                    <button type="button" class="btn btn-primary" onclick="buyPrimaryTicket()">Buy Ticket</button>
+                </form>
+            </section>
+
+            <section class="card">
+                <h2 class="card-title">Buy From Resale</h2>
+                <p class="card-subtitle">Purchase from other ticket holders</p>
+                <form id="buyResaleForm" class="form">
+                    <div class="form-group">
+                        <label for="buyResaleTicketId">Ticket ID</label>
+                        <input type="number" id="buyResaleTicketId" placeholder="e.g., 1" required>
+                    </div>
+                    <div style="flex: 1;"></div>
+                    <button type="button" class="btn btn-secondary" onclick="buyResaleTicket()">Buy From Resale</button>
+                </form>
+            </section>
+        </div>
+
+        <!-- Row 3: Resale Management -->
+        <section class="card">
+            <h2 class="card-title">List Ticket For Resale</h2>
+            <p class="card-subtitle">Put your ticket on the secondary market</p>
+            <form id="listResaleForm" class="form">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label for="resaleTicketId">Ticket ID</label>
+                        <input type="number" id="resaleTicketId" placeholder="e.g., 1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="resalePrice">Resale Price (Wei)</label>
+                        <input type="number" id="resalePrice" placeholder="e.g., 2000000000000000000" required>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-secondary" onclick="listTicketForResale()">List For Resale</button>
+            </form>
+        </section>
+
+        <!-- Row 4: Ticket Info & Validation -->
+        <section class="card">
+            <h2 class="card-title">Ticket Status & Validation</h2>
+            <p class="card-subtitle">Check ticket details and validate access</p>
+            <form id="ticketInfoForm" class="form">
+                <div class="form-group">
+                    <label for="ticketIdCheck">Ticket ID</label>
+                    <input type="number" id="ticketIdCheck" placeholder="e.g., 1" required>
+                </div>
+                <div class="button-group">
+                    <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="getTicketInfo()">Get Ticket Info</button>
+                    <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="validateTicket()">Validate Ticket</button>
+                </div>
+            </form>
+
+            <!-- Ticket Info Display -->
+            <div id="ticketInfoDisplay" class="ticket-info" style="display: none;">
+                <h4>Ticket Details</h4>
+                <div class="info-row">
+                    <span class="info-label">Event ID:</span>
+                    <span id="ticketEventId" class="info-value">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Owner Address:</span>
+                    <span id="ticketOwner" class="info-value">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Status:</span>
+                    <span id="ticketStatus" class="info-value">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Resale Price (Wei):</span>
+                    <span id="ticketResalePrice" class="info-value">-</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Status / Notifications Area -->
+    <aside class="status-panel">
+        <div class="status-header">
+            <h3>Status & Notifications</h3>
+            <button id="clearStatusBtn" class="btn-close" onclick="clearStatus()">×</button>
+        </div>
+        <div id="statusLog" class="status-log">
+            <p class="status-message info">Welcome to NFT Ticket Escrow dApp. Connect your wallet to get started.</p>
+        </div>
+    </aside>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers.js/6.7.1/ethers.umd.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
