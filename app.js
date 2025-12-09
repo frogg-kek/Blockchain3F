@@ -4,7 +4,7 @@
 // ========================================
 
 // ========== CONTRACT CONFIGURATION ==========
-const CONTRACT_ADDRESS = "0x52ff2612FFCa9932c41887bEDB073361983762A6";
+const CONTRACT_ADDRESS = "0x02788Ea16deE4fBbC08040A5cd3E5108A96Ba8f2";
 
 const CONTRACT_ABI = [
   {
@@ -404,10 +404,10 @@ async function createEvent() {
   if (!checkConnection()) return;
 
   try {
-    const eventName = document.getElementById("eventName").value;
-    const eventDate = document.getElementById("eventDate").value;
-    const ticketPrice = document.getElementById("ticketPrice").value;
-    const maxTickets = document.getElementById("maxTickets").value;
+    const eventName = document.getElementById("eventName").value.trim();
+    const eventDate = document.getElementById("eventDate").value.trim();
+    const ticketPrice = document.getElementById("ticketPrice").value.trim();
+    const maxTickets = document.getElementById("maxTickets").value.trim();
 
     if (!eventName || !eventDate || !ticketPrice || !maxTickets) {
       addStatusMessage("Please fill in all fields.", "error");
@@ -418,14 +418,17 @@ async function createEvent() {
 
     const tx = await contract.createEvent(
       eventName,
-      BigInt(eventDate),
-      BigInt(ticketPrice),
-      BigInt(maxTickets)
+      eventDate,
+      ticketPrice,
+      maxTickets
     );
 
     addStatusMessage(`Transaction sent: ${tx.hash}`, "info");
 
     const receipt = await tx.wait();
+
+	
+    
     addStatusMessage(`Event created! Transaction hash: ${receipt.hash}`, "success");
 
     const form = document.getElementById("createEventForm");
