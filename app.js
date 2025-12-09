@@ -513,27 +513,86 @@ async function buyResaleTicket() {
       return;
     }
 
-    addStatusMessage("Fetching resale price... ", "pending");
+    addStatusMessage("Fetching ticket info...", "pending");
 
-    const ticketData = await contract.getTicket(BigInt(ticketId));
+    // Get ticket info
+    let ticketData;
+    try {
+      ticketData = await contract.getTicket(BigInt(ticketId));
+    } catch (error) {
+      addStatusMessage(`Error: Cannot fetch ticket ${ticketId}. It may not exist.`, "error");
+      console.error("GetTicket error:", error);
+      return;
+    }
+    
+    // Check if ticket exists (owner is not zero address)
+    if (!ticketData.owner || ticketData.owner === "0x0000000000000000000000000000000000000000") {
+      addStatusMessage(`Error: Ticket ID ${ticketId} does not exist. Please check the ticket ID and try again.`, "error");
+      return;
+    }
+
+    // Check if it's your own ticket
+    if (ticketData.owner.toLowerCase() === connectedAccount.toLowerCase()) {
+      addStatusMessage(`Error: You cannot buy your own ticket (ID ${ticketId}).`, "error");
+      return;
+    }
+
+    // Check ticket status (2 = ForSale)
+    const statusNum = Number(ticketData.status);
+    if (statusNum !== 2) {
+      const statusNames = {0: "None", 1: "Active", 2: "ForSale", 3: "PendingTransfer", 4: "Used", 5: "Refunded"};
+      addStatusMessage(`Error: Ticket ID ${ticketId} is not for sale. Current status: ${statusNames[statusNum] || "Unknown"}`, "error");
+      return;
+    }
+
     const resalePrice = ticketData.resalePrice;
 
-    addStatusMessage("Buying resale ticket... Transaction pending.", "pending");
+    if (!resalePrice || resalePrice.toString() === "0") {
+      addStatusMessage(`Error: Ticket ID ${ticketId} has no valid resale price set.`, "error");
+      return;
+    }
 
+    const priceInEth = ethers.utils.formatEther(resalePrice);
+    addStatusMessage(`Resale price: ${priceInEth} ETH. Preparing transaction...`, "info");
+
+    // Try to estimate gas first
+    try {
+      const gasEstimate = await contract.estimateGas.buyResaleTicket(BigInt(ticketId), {
+        value: resalePrice
+      });
+      addStatusMessage(`Gas estimate: ${gasEstimate.toString()}. Sending transaction...`, "info");
+    } catch (gasError) {
+      addStatusMessage(`Warning: Gas estimation failed. Trying transaction anyway...`, "warning");
+      console.error("Gas estimation error:", gasError);
+    }
+
+    // Send transaction with manual gas limit if estimation fails
     const tx = await contract.buyResaleTicket(BigInt(ticketId), {
-      value: resalePrice
+      value: resalePrice,
+      gasLimit: 300000 // Manual gas limit as fallback
     });
 
     addStatusMessage(`Transaction sent: ${tx.hash}`, "info");
 
     const receipt = await tx.wait();
-    addStatusMessage(`Resale ticket purchased! Hash: ${receipt.hash}`, "success");
+    addStatusMessage(`✅ Resale ticket purchased! Hash: ${receipt.transactionHash}`, "success");
 
     const form = document.getElementById("buyResaleForm");
     if (form) form.reset();
   } catch (error) {
-    addStatusMessage(`Error: ${error.message}`, "error");
-    console.error("Buy resale ticket error:", error);
+    // Better error parsing
+    let errorMsg = error.message;
+    
+    if (error.data && error.data.message) {
+      errorMsg = error.data.message;
+    } else if (error.reason) {
+      errorMsg = error.reason;
+    } else if (error.error && error.error.message) {
+      errorMsg = error.error.message;
+    }
+    
+    addStatusMessage(`Error: ${errorMsg}`, "error");
+    console.error("Buy resale ticket full error:", error);
   }
 }
 
@@ -551,6 +610,12 @@ async function getTicketInfo() {
     addStatusMessage("Fetching ticket info...", "pending");
 
     const ticketData = await contract.getTicket(BigInt(ticketId));
+
+    // Check if ticket exists
+    if (!ticketData.owner || ticketData.owner === "0x0000000000000000000000000000000000000000") {
+      addStatusMessage(`Error: Ticket ID ${ticketId} does not exist. Buy a primary ticket first to create tickets.`, "error");
+      return;
+    }
 
     displayTicketInfo(ticketData);
 
