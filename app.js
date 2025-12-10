@@ -518,7 +518,7 @@ async function buyResaleTicket() {
     // Get ticket info
     let ticketData;
     try {
-      ticketData = await contract.getTicket(BigInt(ticketId));
+      ticketData = await contract.tickets(ticketId);
     } catch (error) {
       addStatusMessage(`Error: Cannot fetch ticket ${ticketId}. It may not exist.`, "error");
       console.error("GetTicket error:", error);
@@ -609,7 +609,7 @@ async function getTicketInfo() {
 
     addStatusMessage("Fetching ticket info...", "pending");
 
-    const ticketData = await contract.getTicket(BigInt(ticketId));
+    const ticketData = await contract.tickets(BigInt(ticketId));
 
     // Check if ticket exists
     if (!ticketData.owner || ticketData.owner === "0x0000000000000000000000000000000000000000") {
