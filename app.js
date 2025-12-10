@@ -4,7 +4,7 @@
 // ========================================
 
 // ========== CONTRACT CONFIGURATION ==========
-const CONTRACT_ADDRESS = "0x02788Ea16deE4fBbC08040A5cd3E5108A96Ba8f2";
+const CONTRACT_ADDRESS = "0x4f612C43F270faED84A4f62C72Ac7A9BfAe2F2d1";
 
 const CONTRACT_ABI = [
   {
@@ -418,18 +418,72 @@ async function createEvent() {
 
     const tx = await contract.createEvent(
       eventName,
-      eventDate,
-      ticketPrice,
-      maxTickets
+      BigInt(eventDate),
+      BigInt(ticketPrice),
+      BigInt(maxTickets)
     );
 
     addStatusMessage(`Transaction sent: ${tx.hash}`, "info");
 
     const receipt = await tx.wait();
 
-	
+    // Extract event ID from EventCreated event logs
+    let eventId = null;
     
-    addStatusMessage(`Event created! Transaction hash: ${receipt.hash}`, "success");
+    if (receipt.logs && receipt.logs.length > 0) {
+      try {
+        const eventInterface = new ethers.utils.Interface(CONTRACT_ABI);
+        
+        for (const log of receipt.logs) {
+          try {
+            const parsed = eventInterface.parseLog(log);
+            if (parsed.name === "EventCreated") {
+              eventId = parsed.args.eventId.toString();
+              break;
+            }
+          } catch (e) {
+            // Continue to next log if parsing fails
+            continue;
+          }
+        }
+      } catch (e) {
+        console.error("Error parsing logs:", e);
+      }
+    }
+    
+    if (!eventId) {
+      addStatusMessage("Error: Could not extract event ID from transaction. Check console.", "error");
+      console.error("Receipt:", receipt);
+      return;
+    }
+
+    addStatusMessage(`Event created! ID: ${eventId}`, "success");
+
+    // Verify event was created by fetching its data
+    addStatusMessage(`Verifying event ${eventId} exists...`, "pending");
+    
+    try {
+      const eventData = await contract.eventsData(BigInt(eventId));
+      
+      if (eventData.organizer === "0x0000000000000000000000000000000000000000") {
+        addStatusMessage(`Error: Event ${eventId} was not properly created on-chain.`, "error");
+        return;
+      }
+
+      addStatusMessage(`✓ Event ${eventId} verified! Name: ${eventData.name}, Price: ${ethers.utils.formatEther(eventData.ticketPrice)} ETH`, "success");
+      
+      // Auto-populate event ID in buy form
+      const buyEventIdField = document.getElementById("eventId");
+      if (buyEventIdField) {
+        buyEventIdField.value = eventId;
+        addStatusMessage(`Event ID ${eventId} auto-filled in purchase form. Ready to buy tickets!`, "info");
+      }
+      
+    } catch (verifyError) {
+      addStatusMessage(`Error verifying event: ${verifyError.message}`, "error");
+      console.error("Verify error:", verifyError);
+      return;
+    }
 
     const form = document.getElementById("createEventForm");
     if (form) form.reset();
@@ -448,6 +502,22 @@ async function buyPrimaryTicket() {
 
     if (!eventId || !price) {
       addStatusMessage("Please fill in all fields.", "error");
+      return;
+    }
+
+    addStatusMessage("Checking event status...", "pending");
+
+    // Get event details to check if it exists and if cancelled
+    let eventData;
+    try {
+      eventData = await contract.eventsData(BigInt(eventId));
+    } catch (error) {
+      addStatusMessage(`Error: Event ID ${eventId} does not exist.`, "error");
+      return;
+    }
+
+    if (eventData.isCancelled) {
+      addStatusMessage(`Error: Event ID ${eventId} has been cancelled.`, "error");
       return;
     }
 
