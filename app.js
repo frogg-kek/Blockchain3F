@@ -4,7 +4,7 @@
 // ========================================
 
 // ========== CONTRACT CONFIGURATION ==========
-const CONTRACT_ADDRESS = "0xB295A74952f01E966E2b06a3EBaebCEc2d276Bde"; // <-- Pakeisk į adresą iš Remix
+const CONTRACT_ADDRESS = "0xB295A74952f01E966E2b06a3EBaebCEc2d276Bde"; // TODO: įrašyk savo kontrakto adresą
 
 const CONTRACT_ABI = [
   {
@@ -157,15 +157,6 @@ const CONTRACT_ABI = [
     "type": "event"
   },
   {
-    "inputs": [
-      { "internalType": "uint256", "name": "newBps", "type": "uint256" }
-    ],
-    "name": "setPlatformFeeBps",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
     "stateMutability": "payable",
     "type": "fallback"
   },
@@ -286,7 +277,8 @@ let signer = null;
 let contract = null;
 let currentNetwork = null;
 
-// Suderinta su enum TicketStatus
+// Suderinta su enum TicketStatus (Solidity):
+// None(0), Active(1), ForSale(2), PendingTransfer(3), Used(4), Refunded(5)
 const STATUS_LABELS = {
   0: "None",
   1: "Active",
@@ -300,14 +292,60 @@ const STATUS_LABELS = {
 document.addEventListener("DOMContentLoaded", async () => {
   await initializeApp();
 
+  // Connect wallet button
   const connectBtn = document.getElementById("connectWalletBtn");
   if (connectBtn) {
     connectBtn.addEventListener("click", connectWallet);
   }
 
-  document.querySelectorAll("form").forEach((form) => {
-    form.addEventListener("submit", (e) => e.preventDefault());
-  });
+  // Forms & buttons
+  const createEventForm = document.getElementById("createEventForm");
+  if (createEventForm) {
+    createEventForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      createEvent();
+    });
+  }
+
+  const buyPrimaryForm = document.getElementById("buyPrimaryForm");
+  if (buyPrimaryForm) {
+    buyPrimaryForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      buyPrimaryTicket();
+    });
+  }
+
+  const listResaleForm = document.getElementById("listResaleForm");
+  if (listResaleForm) {
+    listResaleForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      listTicketForResale();
+    });
+  }
+
+  const buyResaleForm = document.getElementById("buyResaleForm");
+  if (buyResaleForm) {
+    buyResaleForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      buyResaleTicket();
+    });
+  }
+
+  const getTicketInfoBtn = document.getElementById("getTicketInfoBtn");
+  if (getTicketInfoBtn) {
+    getTicketInfoBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      getTicketInfo();
+    });
+  }
+
+  const validateTicketBtn = document.getElementById("validateTicketBtn");
+  if (validateTicketBtn) {
+    validateTicketBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      validateTicket();
+    });
+  }
 });
 
 async function initializeApp() {
@@ -418,45 +456,39 @@ async function createEvent() {
   try {
     const eventName = document.getElementById("eventName").value.trim();
     const eventDateStr = document.getElementById("eventDate").value.trim();
-    const ticketPriceEth = document.getElementById("ticketPrice").value.trim();
+    const ticketPriceStr = document.getElementById("ticketPrice").value.trim();
     const maxTicketsStr = document.getElementById("maxTickets").value.trim();
 
-    if (!eventName || !eventDateStr || !ticketPriceEth || !maxTicketsStr) {
+    if (!eventName || !eventDateStr || !ticketPriceStr || !maxTicketsStr) {
       addStatusMessage("Please fill in all fields.", "error");
       return;
     }
 
-    // datetime-local -> UNIX timestamp (seconds)
-    const eventTimestampMs = new Date(eventDateStr).getTime();
-    if (isNaN(eventTimestampMs)) {
-      addStatusMessage("Invalid event date format.", "error");
-      return;
-    }
-    const eventTimestamp = Math.floor(eventTimestampMs / 1000);
-    const now = Math.floor(Date.now() / 1000);
-    if (eventTimestamp <= now) {
-      addStatusMessage("Event date must be in the future.", "error");
+    const eventTimestamp = Number(eventDateStr);
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    if (Number.isNaN(eventTimestamp) || eventTimestamp <= nowSec) {
+      addStatusMessage("Event date must be a valid UNIX timestamp in the future.", "error");
       return;
     }
 
-    // ETH -> wei
-    let ticketPriceWei;
-    try {
-      ticketPriceWei = ethers.utils.parseEther(ticketPriceEth);
-    } catch (e) {
-      addStatusMessage("Invalid ticket price (ETH).", "error");
+    if (Number(ticketPriceStr) <= 0) {
+      addStatusMessage("Ticket price must be > 0.", "error");
       return;
     }
 
-    const maxTickets = maxTicketsStr;
+    if (Number(maxTicketsStr) <= 0) {
+      addStatusMessage("Max tickets must be > 0.", "error");
+      return;
+    }
 
     addStatusMessage("Creating event... Transaction pending.", "pending");
 
     const tx = await contract.createEvent(
       eventName,
-      eventTimestamp.toString(),
-      ticketPriceWei,
-      maxTickets.toString()
+      eventDateStr,     // uint256 (UNIX)
+      ticketPriceStr,   // uint256 (wei)
+      maxTicketsStr     // uint256
     );
 
     addStatusMessage(`Transaction sent: ${tx.hash}`, "info");
@@ -530,9 +562,9 @@ async function buyPrimaryTicket() {
   if (!checkConnection()) return;
 
   try {
-    const eventId = document.getElementById("eventId").value.trim();
+    const eventIdStr = document.getElementById("eventId").value.trim();
 
-    if (!eventId) {
+    if (!eventIdStr) {
       addStatusMessage("Please enter event ID.", "error");
       return;
     }
@@ -541,7 +573,7 @@ async function buyPrimaryTicket() {
 
     let eventData;
     try {
-      eventData = await contract.eventsData(eventId);
+      eventData = await contract.eventsData(eventIdStr);
     } catch (error) {
       console.error("eventsData call error:", error);
       addStatusMessage(`RPC error while reading event: ${error.message || error}`, "error");
@@ -549,12 +581,12 @@ async function buyPrimaryTicket() {
     }
 
     if (!eventData.organizer || eventData.organizer === "0x0000000000000000000000000000000000000000") {
-      addStatusMessage(`Error: Event ID ${eventId} does not exist in this contract.`, "error");
+      addStatusMessage(`Error: Event ID ${eventIdStr} does not exist in this contract.`, "error");
       return;
     }
 
     if (eventData.isCancelled) {
-      addStatusMessage(`Error: Event ID ${eventId} has been cancelled.`, "error");
+      addStatusMessage(`Error: Event ID ${eventIdStr} has been cancelled.`, "error");
       return;
     }
 
@@ -563,7 +595,7 @@ async function buyPrimaryTicket() {
 
     addStatusMessage(`Buying primary ticket for ${priceEth} ETH... Transaction pending.`, "pending");
 
-    const tx = await contract.buyPrimaryTicket(eventId, {
+    const tx = await contract.buyPrimaryTicket(eventIdStr, {
       value: ticketPriceWei
     });
 
@@ -584,27 +616,24 @@ async function listTicketForResale() {
   if (!checkConnection()) return;
 
   try {
-    const ticketId = document.getElementById("resaleTicketId").value.trim();
-    const resalePriceEth = document.getElementById("resalePrice").value.trim();
+    const ticketIdStr = document.getElementById("resaleTicketId").value.trim();
+    const resalePriceStr = document.getElementById("resalePrice").value.trim();
 
-    if (!ticketId || !resalePriceEth) {
+    if (!ticketIdStr || !resalePriceStr) {
       addStatusMessage("Please fill in all fields.", "error");
       return;
     }
 
-    let resalePriceWei;
-    try {
-      resalePriceWei = ethers.utils.parseEther(resalePriceEth);
-    } catch (e) {
-      addStatusMessage("Invalid resale price (ETH).", "error");
+    if (Number(resalePriceStr) <= 0) {
+      addStatusMessage("Resale price must be > 0.", "error");
       return;
     }
 
     addStatusMessage("Listing ticket for resale... Transaction pending.", "pending");
 
     const tx = await contract.listTicketForResale(
-      ticketId,
-      resalePriceWei
+      ticketIdStr,
+      resalePriceStr
     );
 
     addStatusMessage(`Transaction sent: ${tx.hash}`, "info");
@@ -624,9 +653,9 @@ async function buyResaleTicket() {
   if (!checkConnection()) return;
 
   try {
-    const ticketId = document.getElementById("buyResaleTicketId").value.trim();
+    const ticketIdStr = document.getElementById("buyResaleTicketId").value.trim();
 
-    if (!ticketId) {
+    if (!ticketIdStr) {
       addStatusMessage("Please enter a ticket ID.", "error");
       return;
     }
@@ -635,27 +664,27 @@ async function buyResaleTicket() {
 
     let ticketData;
     try {
-      ticketData = await contract.tickets(ticketId);
+      ticketData = await contract.tickets(ticketIdStr);
     } catch (error) {
-      addStatusMessage(`Error: Cannot fetch ticket ${ticketId}. It may not exist.`, "error");
+      addStatusMessage(`Error: Cannot fetch ticket ${ticketIdStr}. It may not exist.`, "error");
       console.error("GetTicket error:", error);
       return;
     }
 
     if (!ticketData.owner || ticketData.owner === "0x0000000000000000000000000000000000000000") {
-      addStatusMessage(`Error: Ticket ID ${ticketId} does not exist.`, "error");
+      addStatusMessage(`Error: Ticket ID ${ticketIdStr} does not exist.`, "error");
       return;
     }
 
     if (ticketData.owner.toLowerCase() === connectedAccount.toLowerCase()) {
-      addStatusMessage(`Error: You cannot buy your own ticket (ID ${ticketId}).`, "error");
+      addStatusMessage(`Error: You cannot buy your own ticket (ID ${ticketIdStr}).`, "error");
       return;
     }
 
     const statusNum = Number(ticketData.status);
     if (statusNum !== 2) { // ForSale
       addStatusMessage(
-        `Error: Ticket ID ${ticketId} is not for sale. Current status: ${STATUS_LABELS[statusNum] || "Unknown"}`,
+        `Error: Ticket ID ${ticketIdStr} is not for sale. Current status: ${STATUS_LABELS[statusNum] || "Unknown"}`,
         "error"
       );
       return;
@@ -663,7 +692,7 @@ async function buyResaleTicket() {
 
     const resalePrice = ticketData.resalePrice;
     if (!resalePrice || resalePrice.toString() === "0") {
-      addStatusMessage(`Error: Ticket ID ${ticketId} has no valid resale price set.`, "error");
+      addStatusMessage(`Error: Ticket ID ${ticketIdStr} has no valid resale price set.`, "error");
       return;
     }
 
@@ -671,7 +700,7 @@ async function buyResaleTicket() {
     addStatusMessage(`Resale price: ${priceInEth} ETH. Preparing transaction...`, "info");
 
     try {
-      const gasEstimate = await contract.estimateGas.buyResaleTicket(ticketId, {
+      const gasEstimate = await contract.estimateGas.buyResaleTicket(ticketIdStr, {
         value: resalePrice
       });
       addStatusMessage(`Gas estimate: ${gasEstimate.toString()}. Sending transaction...`, "info");
@@ -680,7 +709,7 @@ async function buyResaleTicket() {
       console.error("Gas estimation error:", gasError);
     }
 
-    const tx = await contract.buyResaleTicket(ticketId, {
+    const tx = await contract.buyResaleTicket(ticketIdStr, {
       value: resalePrice,
       gasLimit: 300000
     });
@@ -711,19 +740,19 @@ async function getTicketInfo() {
   if (!checkConnection()) return;
 
   try {
-    const ticketId = document.getElementById("ticketIdCheck").value.trim();
+    const ticketIdStr = document.getElementById("ticketIdCheck").value.trim();
 
-    if (!ticketId) {
+    if (!ticketIdStr) {
       addStatusMessage("Please enter a ticket ID.", "error");
       return;
     }
 
     addStatusMessage("Fetching ticket info...", "pending");
 
-    const ticketData = await contract.tickets(ticketId);
+    const ticketData = await contract.tickets(ticketIdStr);
 
     if (!ticketData.owner || ticketData.owner === "0x0000000000000000000000000000000000000000") {
-      addStatusMessage(`Error: Ticket ID ${ticketId} does not exist. Buy a primary ticket first to create tickets.`, "error");
+      addStatusMessage(`Error: Ticket ID ${ticketIdStr} does not exist. Buy a primary ticket first to create tickets.`, "error");
       return;
     }
 
@@ -739,16 +768,16 @@ async function validateTicket() {
   if (!checkConnection()) return;
 
   try {
-    const ticketId = document.getElementById("ticketIdCheck").value.trim();
+    const ticketIdStr = document.getElementById("ticketIdCheck").value.trim();
 
-    if (!ticketId) {
+    if (!ticketIdStr) {
       addStatusMessage("Please enter a ticket ID.", "error");
       return;
     }
 
     addStatusMessage("Validating ticket...", "pending");
 
-    const tx = await contract.validateTicket(ticketId);
+    const tx = await contract.validateTicket(ticketIdStr);
 
     addStatusMessage(`Validation tx sent: ${tx.hash}`, "info");
 
@@ -772,14 +801,14 @@ function displayTicketInfo(ticketData) {
     statusIndex !== null && statusIndex !== undefined
       ? STATUS_LABELS[statusIndex] || "Unknown"
       : "-";
-  const resalePrice = ticketData.resalePrice
+  const resalePriceEth = ticketData.resalePrice
     ? ethers.utils.formatEther(ticketData.resalePrice) + " ETH"
     : "-";
 
   document.getElementById("ticketEventId").textContent = eventId;
   document.getElementById("ticketOwner").textContent = owner;
   document.getElementById("ticketStatus").textContent = status;
-  document.getElementById("ticketResalePrice").textContent = resalePrice;
+  document.getElementById("ticketResalePrice").textContent = resalePriceEth;
 
   if (display) display.style.display = "block";
 }
@@ -828,7 +857,8 @@ function clearStatus() {
     statusLog.innerHTML = '<p class="status-message info">Status log cleared.</p>';
   }
 }
-// ========== DEBUG HELPER ==========
+
+// OPTIONAL DEBUG HELPER (galėsi pasikviesti iš console: debugCheck())
 async function debugCheck() {
   try {
     if (!provider) {
