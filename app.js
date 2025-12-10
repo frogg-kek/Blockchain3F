@@ -265,7 +265,6 @@ const CONTRACT_ABI = [
   }
 ];
 
-// ========== GLOBAL STATE ==========
 let connectedAccount = null;
 let provider = null;
 let signer = null;
@@ -283,11 +282,10 @@ const STATUS_LABELS = {
   5: "Refunded"
 };
 
-// ========== INITIALIZATION ==========
 document.addEventListener("DOMContentLoaded", async () => {
   await initializeApp();
 
-  // Connect wallet button
+  // Wallet mygtukas
   const connectBtn = document.getElementById("connectWalletBtn");
   if (connectBtn) {
     connectBtn.addEventListener("click", connectWallet);
