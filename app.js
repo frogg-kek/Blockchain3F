@@ -1,10 +1,5 @@
-// ========================================
-// NFT TICKET ESCROW dApp - JavaScript
-// Interact with smart contract via MetaMask
-// ========================================
-
-// ========== CONTRACT CONFIGURATION ==========
-const CONTRACT_ADDRESS = "0xB295A74952f01E966E2b06a3EBaebCEc2d276Bde"; // TODO: įrašyk savo kontrakto adresą
+// ========== KONTRAKTO KONFIGURACIJA ==========
+const CONTRACT_ADDRESS = "0xB295A74952f01E966E2b06a3EBaebCEc2d276Bde";
 
 const CONTRACT_ABI = [
   {
