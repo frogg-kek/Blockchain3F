@@ -479,9 +479,9 @@ async function createEvent() {
 
     const tx = await contract.createEvent(
       eventName,
-      eventDateStr,     // uint256 (UNIX)
-      ticketPriceStr,   // uint256 (wei)
-      maxTicketsStr     // uint256
+      eventDateStr,     
+      ticketPriceStr,   
+      maxTicketsStr 
     );
 
     addStatusMessage(`Transaction sent: ${tx.hash}`, "info");
