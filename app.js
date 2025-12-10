@@ -400,7 +400,7 @@ function updateWalletButton() {
   }
 }
 
-// ========== WALLET CONNECTION ==========
+// ========== Pinigines prisijungimas ==========
 async function connectWallet() {
   try {
     if (typeof window.ethereum === "undefined") {
