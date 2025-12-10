@@ -517,7 +517,7 @@ async function createEvent() {
 
     addStatusMessage(`Event created! ID: ${eventId}`, "success");
 
-    // Verify event was created
+    // Patikra ar pasikure ivykis
     addStatusMessage(`Verifying event ${eventId} exists...`, "pending");
     try {
       const eventData = await contract.eventsData(eventId);
