@@ -441,7 +441,7 @@ function initializeContract() {
   contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 }
 
-// ========== CONTRACT INTERACTIONS ==========
+// ==========  Kontrakto panaudojimas ==========
 
 async function createEvent() {
   if (!checkConnection()) return;
