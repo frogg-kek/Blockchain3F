@@ -291,7 +291,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     connectBtn.addEventListener("click", connectWallet);
   }
 
-  // Forms & buttons
+  // Formos ir mygtukai
   const createEventForm = document.getElementById("createEventForm");
   if (createEventForm) {
     createEventForm.addEventListener("submit", (e) => {
