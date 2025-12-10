@@ -850,36 +850,3 @@ function clearStatus() {
     statusLog.innerHTML = '<p class="status-message info">Status log cleared.</p>';
   }
 }
-
-// OPTIONAL DEBUG HELPER (galėsi pasikviesti iš console: debugCheck())
-async function debugCheck() {
-  try {
-    if (!provider) {
-      console.log("No provider in dApp");
-      addStatusMessage("debugCheck: no provider", "error");
-      return;
-    }
-    if (!contract) {
-      console.log("No contract in dApp");
-      addStatusMessage("debugCheck: contract not initialized", "error");
-      return;
-    }
-
-    console.log("=== DEBUG START ===");
-    console.log("Front-end CONTRACT_ADDRESS:", CONTRACT_ADDRESS);
-
-    const net = await provider.getNetwork();
-    console.log("Front-end network:", net);
-
-    const nextEv = await contract.nextEventId();
-    console.log("Front-end nextEventId():", nextEv.toString());
-
-    const ev1 = await contract.eventsData(1);
-    console.log("Front-end eventsData(1):", ev1);
-
-    addStatusMessage("debugCheck complete. Look at browser console (F12).", "info");
-  } catch (e) {
-    console.error("debugCheck error:", e);
-    addStatusMessage("debugCheck error: " + (e.message || e), "error");
-  }
-}
