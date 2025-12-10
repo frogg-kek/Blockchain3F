@@ -488,7 +488,7 @@ async function createEvent() {
 
     const receipt = await tx.wait();
 
-    // Extract event ID from EventCreated event logs
+    // Event ID istraukimas
     let eventId = null;
     if (receipt.logs && receipt.logs.length > 0) {
       try {
