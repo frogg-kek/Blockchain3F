@@ -3,22 +3,22 @@ pragma solidity ^0.8.20;
 
 /**
  * @title NftTicketEscrow
- * @dev Simple NFT-like ticketing and resale system with escrow-style transfers.
- *      Educational example suitable for Remix and testnets (Sepolia, etc).
+ * @dev Paprasta NFT tipo bilietų sistema su perpardavimu ir „escrow“ stiliaus pervedimais.
+ *      Edukacinis pavyzdys, tinkamas Remix ir testnetams (pvz., Sepolia).
  *
- * Features:
- *  - Event creation by organizers
- *  - Primary ticket purchases
- *  - Secondary resale marketplace with on-contract escrow handling
- *  - Ticket validation (mark as used)
- *  - Event cancellation and ticket refunds
+ * Funkcijos:
+ *  - Renginių kūrimas organizatorių
+ *  - Pirminis bilietų pirkimas
+ *  - Antrinės rinkos perpardavimas su „escrow“ tvarkymu sutartyje
+ *  - Bilieto patikrinimas (pažymėjimas kaip panaudoto)
+ *  - Renginio atšaukimas ir bilietų grąžinimas
  *
- * Notes:
- *  - Tickets are simple structs (not an ERC-721 implementation) to keep code compact.
- *  - All external calls that transfer ETH use the checks-effects-interactions pattern.
+ * Pastabos:
+ *  - Bilietai yra paprasti struktūros (ne ERC-721 įgyvendinimas), kad kodas būtų kompaktiškas.
+ *  - Visi išoriniai ETH pervedimai naudoja „checks-effects-interactions“ modelį.
  */
 contract NftTicketEscrow {
-    // ---------- Types ----------
+    // ---------- Tipai ----------
     enum TicketStatus {
         None,
         Active,
@@ -32,8 +32,8 @@ contract NftTicketEscrow {
         uint256 id;
         address organizer;
         string name;
-        uint256 date; // UNIX timestamp
-        uint256 ticketPrice; // in wei
+        uint256 date; // UNIX laiko žyma
+        uint256 ticketPrice; // wei vienetais
         uint256 maxTickets;
         uint256 soldTickets;
         bool isCancelled;
@@ -43,11 +43,11 @@ contract NftTicketEscrow {
         uint256 id;
         uint256 eventId;
         address owner;
-        uint256 resalePrice; // if ForSale
+        uint256 resalePrice; // jei ForSale
         TicketStatus status;
     }
 
-    // ---------- Storage ----------
+    // ---------- Saugykla ----------
     mapping(uint256 => EventData) public eventsData;
     mapping(uint256 => Ticket) public tickets;
 
@@ -55,10 +55,10 @@ contract NftTicketEscrow {
     uint256 public nextTicketId = 1;
 
     address public platformAdmin;
-    // basis points: 10000 = 100%. e.g. 250 = 2.5%
+    // baziniai punktai: 10000 = 100%. pvz., 250 = 2.5%
     uint256 public platformFeeBps = 250;
 
-    // ---------- Events ----------
+    // ---------- Įvykiai ----------
     event EventCreated(uint256 indexed eventId, address indexed organizer, string name, uint256 date, uint256 ticketPrice, uint256 maxTickets);
     event PrimaryTicketPurchased(uint256 indexed eventId, uint256 indexed ticketId, address indexed buyer, uint256 price);
     event TicketListedForResale(uint256 indexed ticketId, uint256 indexed eventId, address indexed seller, uint256 resalePrice);
@@ -68,38 +68,38 @@ contract NftTicketEscrow {
     event RefundIssued(uint256 indexed ticketId, uint256 indexed eventId, address indexed recipient, uint256 amount);
     event PlatformFeeUpdated(uint256 oldBps, uint256 newBps);
 
-    // ---------- Modifiers ----------
+    // ---------- Modifikatoriai ----------
     modifier onlyAdmin() {
-        require(msg.sender == platformAdmin, "Only admin");
+        require(msg.sender == platformAdmin, "Tik administratorius");
         _;
     }
 
     modifier onlyOrganizer(uint256 eventId) {
-        require(eventsData[eventId].organizer == msg.sender, "Only organizer");
+        require(eventsData[eventId].organizer == msg.sender, "Tik organizatorius");
         _;
     }
 
-    // ---------- Constructor ----------
+    // ---------- Konstruktorius ----------
     constructor() {
         platformAdmin = msg.sender;
-        platformFeeBps = 250; // default 2.5%
+        platformFeeBps = 250; // numatytasis 2.5%
     }
 
-    // ---------- Admin functions ----------
-    /// @notice Set platform fee in basis points (10000 = 100%). Only admin.
+    // ---------- Administratoriaus funkcijos ----------
+    /// @notice Nustatyti platformos mokestį baziniais punktais (10000 = 100%). Tik administratorius.
     function setPlatformFeeBps(uint256 newBps) external onlyAdmin {
-        require(newBps <= 5000, "Fee too large"); // prevent crazy fees (>50%)
+        require(newBps <= 5000, "Mokestis per didelis"); // apsauga nuo neadekvačių mokesčių (>50%)
         uint256 old = platformFeeBps;
         platformFeeBps = newBps;
         emit PlatformFeeUpdated(old, newBps);
     }
 
-    // ---------- Event & Ticket lifecycle ----------
-    /// @notice Create an event. Organizer becomes msg.sender.
+    // ---------- Renginio ir bilieto ciklas ----------
+    /// @notice Sukurti renginį. Organizatoriumi tampa msg.sender.
     function createEvent(string memory name, uint256 date, uint256 ticketPrice, uint256 maxTickets) external {
-        require(date > block.timestamp, "date must be in future");
-        require(ticketPrice > 0, "ticketPrice must be > 0");
-        require(maxTickets > 0, "maxTickets must be > 0");
+        require(date > block.timestamp, "data turi būti ateityje");
+        require(ticketPrice > 0, "bilieto kaina turi būti > 0");
+        require(maxTickets > 0, "bilietų skaičius turi būti > 0");
 
         uint256 eventId = nextEventId++;
 
@@ -117,16 +117,16 @@ contract NftTicketEscrow {
         emit EventCreated(eventId, msg.sender, name, date, ticketPrice, maxTickets);
     }
 
-    /// @notice Buy a primary ticket directly from the organizer.
+    /// @notice Įsigyti pirminį bilietą tiesiogiai iš organizatoriaus.
     function buyPrimaryTicket(uint256 eventId) external payable {
         EventData storage ev = eventsData[eventId];
-        require(ev.organizer != address(0), "event does not exist");
-        require(!ev.isCancelled, "event cancelled");
-        require(block.timestamp < ev.date, "event already started or passed");
-        require(ev.soldTickets < ev.maxTickets, "sold out");
-        require(msg.value == ev.ticketPrice, "incorrect payment");
+        require(ev.organizer != address(0), "renginys neegzistuoja");
+        require(!ev.isCancelled, "renginys atšauktas");
+        require(block.timestamp < ev.date, "renginys jau prasidėjo arba baigėsi");
+        require(ev.soldTickets < ev.maxTickets, "nebėra bilietų");
+        require(msg.value == ev.ticketPrice, "neteisinga mokėjimo suma");
 
-        // Effects: mint ticket and update sold count
+        // Efektai: „išleidžiamas“ bilietas ir atnaujinamas parduotų skaičius
         uint256 ticketId = nextTicketId++;
         tickets[ticketId] = Ticket({
             id: ticketId,
@@ -138,19 +138,19 @@ contract NftTicketEscrow {
 
         ev.soldTickets++;
 
-        // Interactions: transfer funds to organizer (checks-effects-interactions)
+        // Sąveikos: pervedamos lėšos organizatoriui (checks-effects-interactions)
         (bool sent, ) = payable(ev.organizer).call{value: msg.value}('');
-        require(sent, "transfer to organizer failed");
+        require(sent, "pervedimas organizatoriui nepavyko");
 
         emit PrimaryTicketPurchased(eventId, ticketId, msg.sender, msg.value);
     }
 
-    /// @notice List an owned ticket for resale at a chosen price.
+    /// @notice Įtraukti savo bilietą į perpardavimą pasirinkta kaina.
     function listTicketForResale(uint256 ticketId, uint256 resalePrice) external {
         Ticket storage t = tickets[ticketId];
-        require(t.owner == msg.sender, "not ticket owner");
-        require(t.status == TicketStatus.Active, "ticket not active");
-        require(resalePrice > 0, "resalePrice must be > 0");
+        require(t.owner == msg.sender, "ne bilieto savininkas");
+        require(t.status == TicketStatus.Active, "bilietas neaktyvus");
+        require(resalePrice > 0, "perpardavimo kaina turi būti > 0");
 
         t.resalePrice = resalePrice;
         t.status = TicketStatus.ForSale;
@@ -158,103 +158,103 @@ contract NftTicketEscrow {
         emit TicketListedForResale(ticketId, t.eventId, msg.sender, resalePrice);
     }
 
-    /// @notice Buy a ticket listed for resale. Contract handles escrow and platform fee.
+    /// @notice Įsigyti perpardavimui pateiktą bilietą. Sutartis tvarko „escrow“ ir platformos mokestį.
     function buyResaleTicket(uint256 ticketId) external payable {
         Ticket storage t = tickets[ticketId];
-        require(t.status == TicketStatus.ForSale, "ticket not for sale");
-        require(msg.value == t.resalePrice, "incorrect payment");
-        require(msg.sender != t.owner, "owner cannot buy their own ticket");
+        require(t.status == TicketStatus.ForSale, "bilietas neparduodamas");
+        require(msg.value == t.resalePrice, "neteisinga mokėjimo suma");
+        require(msg.sender != t.owner, "savininkas negali pirkti savo bilieto");
 
         address seller = t.owner;
         uint256 price = t.resalePrice;
         uint256 fee = (price * platformFeeBps) / 10000;
         uint256 sellerAmount = price - fee;
 
-        // Effects: change ownership and reset resale fields before transferring funds
+        // Efektai: pakeičiamas savininkas ir atstatomi perpardavimo laukai prieš pervedant lėšas
         t.owner = msg.sender;
         t.resalePrice = 0;
         t.status = TicketStatus.Active;
 
-        // Interactions: pay seller and platform
+        // Sąveikos: apmokamas pardavėjas ir platforma
         (bool sentSeller, ) = payable(seller).call{value: sellerAmount}('');
-        require(sentSeller, "payment to seller failed");
+        require(sentSeller, "mokėjimas pardavėjui nepavyko");
 
         if (fee > 0) {
             (bool sentFee, ) = payable(platformAdmin).call{value: fee}('');
-            require(sentFee, "payment of fee failed");
+            require(sentFee, "mokesčio pervedimas nepavyko");
         }
 
         emit ResaleCompleted(ticketId, t.eventId, msg.sender, seller, price, fee);
     }
 
-    /// @notice Validate (use) a ticket. This marks it as Used.
-    /// @dev For simplicity callable by anyone; in production restrict to gate staff or organizer.
+    /// @notice Patikrinti (panaudoti) bilietą. Tai pažymi jį kaip panaudotą.
+    /// @dev Supaprastinimui leidžiama kviesti bet kam; produkcijoje ribokite vartų personalui ar organizatoriui.
     function validateTicket(uint256 ticketId) external {
         Ticket storage t = tickets[ticketId];
-        require(t.status == TicketStatus.Active, "ticket not active");
+        require(t.status == TicketStatus.Active, "bilietas neaktyvus");
 
         EventData storage ev = eventsData[t.eventId];
-        require(ev.organizer != address(0), "event does not exist");
-        // Optionally require time before event date
-        // require(block.timestamp <= ev.date, "event already passed");
+        require(ev.organizer != address(0), "renginys neegzistuoja");
+        // Pasirinktinai galima reikalauti laiko prieš renginio datą
+        // require(block.timestamp <= ev.date, "renginys jau pasibaigė");
 
         t.status = TicketStatus.Used;
 
         emit TicketUsed(ticketId, t.eventId, msg.sender);
     }
 
-    /// @notice Cancel an event. Only organizer may call.
+    /// @notice Atšaukti renginį. Gali kviesti tik organizatorius.
     function cancelEvent(uint256 eventId) external onlyOrganizer(eventId) {
         EventData storage ev = eventsData[eventId];
-        require(!ev.isCancelled, "already cancelled");
+        require(!ev.isCancelled, "jau atšaukta");
 
         ev.isCancelled = true;
 
         emit EventCancelled(eventId);
     }
 
-    /// @notice Refund a ticket after its event has been cancelled.
-    /// @dev Refunds the original primary ticket price. If ticket was purchased via resale,
-    ///      we still refund the original event ticket price for simplicity.
+    /// @notice Grąžinti bilieto sumą, kai renginys atšauktas.
+    /// @dev Grąžinama pradinė pirminio bilieto kaina. Jei bilietas pirktas per perpardavimą,
+    ///      paprastumo dėlei vis tiek grąžiname pradinę renginio bilieto kainą.
     function refundTicket(uint256 ticketId) external {
         Ticket storage t = tickets[ticketId];
-        require(t.owner == msg.sender, "not ticket owner");
-        require(t.status != TicketStatus.Refunded, "already refunded");
+        require(t.owner == msg.sender, "ne bilieto savininkas");
+        require(t.status != TicketStatus.Refunded, "jau grąžinta");
 
         EventData storage ev = eventsData[t.eventId];
-        require(ev.organizer != address(0), "event does not exist");
-        require(ev.isCancelled, "event not cancelled");
+        require(ev.organizer != address(0), "renginys neegzistuoja");
+        require(ev.isCancelled, "renginys neatšauktas");
 
         uint256 amount = ev.ticketPrice;
 
-        // Effects: mark refunded so it can't be reused
+        // Efektai: pažymėti kaip grąžintą, kad nebūtų pakartotinai naudojamas
         t.status = TicketStatus.Refunded;
 
-        // Interaction: send refund to ticket owner
+        // Sąveika: pervesti grąžinamą sumą bilieto savininkui
         (bool sent, ) = payable(msg.sender).call{value: amount}('');
-        require(sent, "refund transfer failed");
+        require(sent, "grąžinimo pervedimas nepavyko");
 
         emit RefundIssued(ticketId, t.eventId, msg.sender, amount);
     }
 
-    // ---------- Helpers / Views ----------
-    /// @notice Helper to check if an event exists
+    // ---------- Pagalbinės / vaizdo funkcijos ----------
+    /// @notice Pagalbinė funkcija patikrinti, ar renginys egzistuoja
     function eventExists(uint256 eventId) public view returns (bool) {
         return eventsData[eventId].organizer != address(0);
     }
 
-    /// @notice Get basic ticket info tuple
+    /// @notice Gauti pagrindinę bilieto informacijos grupę
     function getTicket(uint256 ticketId) external view returns (uint256 id, uint256 eventId, address owner, uint256 resalePrice, TicketStatus status) {
         Ticket storage t = tickets[ticketId];
         return (t.id, t.eventId, t.owner, t.resalePrice, t.status);
     }
 
-    // Fallbacks: reject direct ETH sends without calling functions
+    // Atsarginės funkcijos: atmesti tiesioginius ETH siuntimus nekviečiant funkcijų
     receive() external payable {
-        revert("use contract functions");
+        revert("naudokite sutarties funkcijas");
     }
 
     fallback() external payable {
-        revert("use contract functions");
+        revert("naudokite sutarties funkcijas");
     }
 }
