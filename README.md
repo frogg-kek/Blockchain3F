@@ -403,7 +403,7 @@ Naudojantis kontrakto adresu bei transakcijų maišomis (hash), buvo atvertas Tr
 - topics ir data laukai.
 
 📸 11 pav. – Išmaniosios sutarties įvykių logai Sepolia Etherscan sistemoje
-![alt text](Screenshot_46.png)
+![alt text](Screenshot_47.png)
 
 
 ✅ GALUTINĖ IŠVADA
