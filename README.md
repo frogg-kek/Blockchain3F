@@ -265,3 +265,153 @@ sequenceDiagram
 3. Antrinis pirkėjas (Secondary Buyer) marketplace lange pasirenka tą bilietą ir inicijuoja pirkimą (`buyResaleTicket`)
 4. Kontraktas patikrina, ar bilietas vis dar parduodamas ir ar pirkėjas nėra tas pats savininkas, tuomet atnaujina `owner` lauką į naują adresą, išvalo `resalePrice` ir grąžina būseną į `Active`
 5. dApp informuoja abu vartotojus apie sėkmingą perpardavimą ir atitinkamai atnaujina sąrašus „My Tickets" bei „Marketplace"
+
+---
+
+# Trumpas testavimo veiksmų paaiškinimas
+
+Išmaniosios sutarties testavimas Ethereum lokaliame tinkle (Ganache + Truffle)
+
+Lokaliam išmaniosios sutarties testavimui buvo naudojamas lokalus Ethereum tinklas, sukurtas naudojant Ganache įrankį. Šis įrankis leidžia emuliuoti tikrą Ethereum blokų grandinę lokaliame kompiuteryje bei suteikia testinius vartotojų adresus su virtualiu ETH balansu. Išmaniosios sutarties diegimui ir testavimui lokaliame tinkle buvo naudojamas Truffle karkasas.
+
+
+5.1. Išmaniosios sutarties diegimas į lokalų tinklą
+
+Išmanioji sutartis buvo sėkmingai įdiegta į lokalų Ganache tinklą naudojant komandą:
+
+```bash
+truffle migrate --network development
+```
+
+Šios komandos vykdymo metu buvo sukurta migracijos transakcija bei gautas naujas išmaniosios sutarties adresas.
+
+📸 2 pav. – Sėkmingas kontrakto diegimas naudojant Truffle (truffle migrate)
+<!-- TODO: Įterpti 2 pav. terminalo nuotrauką -->
+![alt text](Screenshot_33.png)
+
+5.2. Renginio kūrimo testavimas
+
+Naudojant Truffle konsolę, buvo iškviesta funkcija `createEvent`, kuri sukuria naują renginį:
+
+```js
+await instance.createEvent("My Event", 2000000000, 1000, 3);
+```
+
+Po to buvo patikrinti sukurto renginio duomenys naudojant funkciją `eventsData(1)`. Rezultatai patvirtino, kad renginys buvo sukurtas teisingai – matomas pavadinimas, bilieto kaina bei maksimalus bilietų skaičius.
+
+📸 3 pav. – Renginio kūrimas ir peržiūra per Truffle console (createEvent, eventsData)
+<!-- TODO: Įterpti 3 pav. konsolės nuotrauką -->
+![alt text](Screenshot_33.png)
+
+5.3. Pirminio bilieto pirkimo testavimas
+
+Buvo atliktas pirminis bilieto pirkimas naudojant funkciją `buyPrimaryTicket`, perduodant tikslų bilieto kainos dydį `msg.value` lauke:
+
+```js
+// Pvz.:
+// const ev = await instance.eventsData(1);
+await instance.buyPrimaryTicket(1, { value: ev.ticketPrice });
+```
+
+Po transakcijos įvykdymo buvo iškviesta funkcija `getTicket(1)`:
+
+
+📸 4 pav. – Pirminio bilieto pirkimas ir getTicket(1) rezultatas
+<!-- TODO: Įterpti 4 pav. konsolės nuotrauką -->
+![alt text](Screenshot_33.png)
+
+5.4. Bilieto perpardavimo testavimas (antrinė rinka)
+
+Pirmasis bilieto savininkas užregistravo bilietą perpardavimui naudojant funkciją:
+
+```js
+await instance.listTicketForResale(1, 2000, { from: accounts[0] });
+```
+
+Po to bilieto būsena pasikeitė į `ForSale`, o perpardavimo kaina – į `2000` Wei.
+
+📸 5 pav. – Bilieto užregistravimas perpardavimui (listTicketForResale)
+<!-- TODO: Įterpti 5 pav. konsolės nuotrauką -->
+![alt text](Screenshot_36.png)
+
+Toliau kitas vartotojas (antras testinis account) nupirko bilietą antrinėje rinkoje:
+
+```js
+await instance.buyResaleTicket(1, { from: accounts[1], value: 2000 });
+```
+
+Po šio veiksmo:
+
+- bilieto savininkas pasikeitė į antrąjį vartotoją,
+- bilieto būsena vėl tapo Active.
+
+📸 6 pav. – Antrinis bilieto pirkimas (buyResaleTicket)
+![alt text](Screenshot_36.png)
+
+5.5. Bilieto validacijos (panaudojimo) testavimas
+
+Bilieto savininkas atliko bilieto panaudojimą naudodamas funkciją:
+
+```js
+await instance.validateTicket(1, { from: accounts[1] });
+```
+
+Po šio veiksmo bilieto būsena pasikeitė į `Used`, o tai reiškia, kad tas pats bilietas nebegali būti panaudotas pakartotinai.
+
+📸 7 pav. – Bilieto validacija (validateTicket)
+![alt text](Screenshot_38.png)
+
+✅ Šiame etape pilnai įgyvendintas – išmaniosios sutarties testavimas lokaliame Ethereum tinkle.
+
+6. Išmaniosios sutarties testavimas Ethereum testiniame tinkle (Sepolia)
+
+Išmanioji sutartis buvo įdiegta į viešą Sepolia testinį tinklą naudojant MetaMask virtualią piniginę bei Remix IDE aplinką.
+
+Prieš diegimą MetaMask piniginė buvo papildyta testiniu Sepolia ETH. Kontraktas buvo įdiegtas pasirinkus:
+
+- Environment: Browser Wallet,
+- VALUE = 0,
+- tinklą – Sepolia.
+
+📸 8 pav. – Sėkmingas kontrakto diegimas į Sepolia tinklą per MetaMask
+![alt text](Screenshot_40.png)
+
+6.1. Funkcijų testavimas Sepolia tinkle
+
+Sėkmingai įdiegus kontraktą, buvo išbandytos šios funkcijos:
+
+- `createEvent` – sukurti naujam renginiui,
+- `buyPrimaryTicket` – pirminiam bilieto pirkimui su `msg.value`.
+
+📸 9 pav. – createEvent iškvietimas Sepolia tinkle
+![alt text](Screenshot_40.png)
+
+📸 10 pav. – buyPrimaryTicket iškvietimas Sepolia tinkle
+![alt text](Screenshot_46.png)
+
+✅ Šiuo etapu pilnai įvykdytas – testavimas viešame Ethereum testiniame tinkle (Sepolia).
+
+7. Išmaniosios sutarties vykdymo logų peržiūra per Etherscan
+
+Po sėkmingų transakcijų vykdymo Sepolia tinkle, kontrakto veikimo logai buvo peržiūrėti naudojant Etherscan naršyklę.
+
+Naudojantis kontrakto adresu bei transakcijų maišomis (hash), buvo atvertas Transaction Receipt Event Logs langas, kuriame matomi:
+
+- įvykių tipai (event),
+- kontrakto adresas,
+- blokų numeriai,
+- topics ir data laukai.
+
+📸 11 pav. – Išmaniosios sutarties įvykių logai Sepolia Etherscan sistemoje
+![alt text](Screenshot_46.png)
+
+
+✅ GALUTINĖ IŠVADA
+
+Atlikus testavimą:
+
+- lokaliame Ethereum tinkle (Ganache + Truffle),
+- viešame Ethereum testiniame tinkle (Sepolia + MetaMask),
+- bei patikrinus vykdymo logus per Etherscan,
+
+patvirtinta, kad sukurta išmanioji sutartis veikia korektiškai, saugiai ir pagal numatytą verslo logiką.
