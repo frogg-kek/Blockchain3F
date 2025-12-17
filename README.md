@@ -415,3 +415,13 @@ Atlikus testavimą:
 - bei patikrinus vykdymo logus per Etherscan,
 
 patvirtinta, kad sukurta išmanioji sutartis veikia korektiškai, saugiai ir pagal numatytą verslo logiką.
+
+---
+
+# AI įrankio naudojimas
+
+Šio projekto metu AI įrankis buvo panaudotas kaip praktinis pagalbininkas:
+
+- Kontrakto struktūrai: padėjo sudaryti išmaniosios sutarties struktūrą, parinkti efektyvius sprendimus ir taikyti gerąsias praktikas.
+- CSS ir UI: parengė bazinius CSS stilius ir padėjo tobulinti naudotojo sąsają.
+- Testavimui ir prijungimui: buvo pagalbininkas aiškinant, kaip testuoti (Truffle, Remix), ir kaip prijungti prie tinklų (Ganache, Sepolia, MetaMask), siūlė nuoseklius žingsnius ir klaidų šalinimo būdus.
