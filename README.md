@@ -68,10 +68,6 @@ Verslo modelyje dalyvauja šios pagrindinės šalys:
 - Po sėkmingos patikros bilieto būsena pakeičiama į `Used` (panaudotas), tokiu būdu bilietas nebegali būti panaudotas antrą kartą
 - Praktikoje šis vaidmuo gali būti organizatoriaus atstovas arba automatinis skanavimo terminalas, sujungtas su dApp
 
-### ⚙️ Platformos administratorius (Platform Admin) *(pasirinktinai)*
-
-- Gali turėti teises keisti platformos parametrus (pvz., mokesčio procentą)
-- Šioje supaprastintoje versijoje pagrindinis dėmesys skiriamas bilietų logikai, todėl admin rolė naudojama minimaliai
 
 ---
 
